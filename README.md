@@ -35,10 +35,10 @@ The programs are using the [hidapi][3] library and should work on Linux and OSX.
 The `install` target installs udev rules on Linux which allow running the programs without root.
 You may need to use `sudo` otherwise.
 
-To build on OSX:
+To reload udev rules without restarting, run these:  
+`sudo udevadm control --reload-rules`  
+`sudo udevadm trigger`
 
-    brew tap rgerganov/footswitch https://github.com/rgerganov/footswitch.git
-    brew install --HEAD footswitch
 
 Usage
 -----

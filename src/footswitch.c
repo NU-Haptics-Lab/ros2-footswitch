@@ -53,24 +53,6 @@ pedal_data *curr_pedal = &pd.pedals[1]; // start at the second pedal
 // STRING must be by itself
 #define STRING_TYPE    4
 
-void usage() {
-    fprintf(stderr, "Usage: footswitch [-123] [-r] [-s <string>] [-S <raw_string>] [-ak <key>] [-m <modifier>] [-b <button>] [-xyw <XYW>]\n"
-        "   -r          - read all pedals\n"
-        "   -1          - program the first pedal\n"
-        "   -2          - program the second pedal (default)\n"
-        "   -3          - program the third pedal\n"
-        "   -s string   - append the specified string\n"
-        "   -S rstring  - append the specified raw string (hex numbers delimited with spaces)\n"
-        "   -a key      - append the specified key\n"
-        "   -k key      - write the specified key\n"
-        "   -m modifier - (l_,r_)ctrl|shift|alt|win\n"
-        "   -b button   - mouse_left|mouse_middle|mouse_right\n"
-        "   -x X        - move the mouse cursor horizontally by X pixels\n"
-        "   -y Y        - move the mouse cursor vertically by Y pixels\n"
-        "   -w W        - move the mouse wheel by W\n\n"
-        "You cannot mix -sSa options with -kmbxyw options for one and the same pedal\n");
-    exit(1);
-}
 
 void init_pid(unsigned short vid, unsigned short pid) {
 #ifdef OSX
@@ -145,90 +127,6 @@ void usb_write(unsigned char data[8]) {
         fatal("error writing data (%ls)", hid_error(dev));
     }
     usleep(30 * 1000);
-}
-
-void print_mouse(unsigned char data[]) {
-    int x = data[5], y = data[6], w = data[7];
-    switch (data[4]) {
-        case 1:
-            printf("mouse_left ");
-            break;
-        case 2:
-            printf("mouse_right ");
-            break;
-        case 4:
-            printf("mouse_middle ");
-            break;
-    }
-    x = x > 127 ? x - 256 : x;
-    y = y > 127 ? y - 256 : y;
-    w = w > 127 ? w - 256 : w;
-    printf("X=%d Y=%d W=%d", x, y, w);
-}
-
-void print_key(unsigned char data[]) {
-    char combo[128] = {0};
-    if ((data[2] & CTRL) != 0) {
-        strcat(combo, "l_ctrl+");
-    }
-    if ((data[2] & SHIFT) != 0) {
-        strcat(combo, "l_shift+");
-    }
-    if ((data[2] & ALT) != 0) {
-        strcat(combo, "l_alt+");
-    }
-    if ((data[2] & WIN) != 0) {
-        strcat(combo, "l_win+");
-    }
-    if ((data[2] & R_CTRL) != 0) {
-        strcat(combo, "r_ctrl+");
-    }
-    if ((data[2] & R_SHIFT) != 0) {
-        strcat(combo, "r_shift+");
-    }
-    if ((data[2] & R_ALT) != 0) {
-        strcat(combo, "r_alt+");
-    }
-    if ((data[2] & R_WIN) != 0) {
-        strcat(combo, "r_win+");
-    }
-    if (data[3] != 0) {
-        const char *key = decode_byte(data[3]);
-        strcat(combo, key);
-    } else {
-        size_t len = strlen(combo);
-        if (len > 0) {
-            combo[len - 1] = 0; // remove the last +
-        }
-    }
-    printf("%s", combo);
-}
-
-void print_string(unsigned char data[]) {
-    int r = 0, tr = 0, ind = 2;
-    int len = data[0] - 2;
-    const char *str = NULL;
-
-    while (len > 0) {
-        if (ind == 8) {
-            r = hid_read(dev, data, 8);
-            if (r < 0) {
-                fatal("error reading data (%ls)", hid_error(dev));
-            }
-            if (tr != 8) {
-                fatal("expected 8 bytes, received: %d", tr);
-            }
-            ind = 0;
-        }
-        str = decode_byte(data[ind]);
-        if (strlen(str) > 1) {
-            printf("<%s>", str);
-        } else {
-            printf("%s", str);
-        }
-        len--;
-        ind++;
-    }
 }
 
 void read_pedals() {
@@ -489,66 +387,15 @@ void write_pedals() {
 }
 
 int main(int argc, char *argv[]) {
-    int opt;
+    // ROS stuff
+    // https://roboticsbackend.com/write-minimal-ros2-cpp-node/
+    rclcpp::init(argc, argv);
+    std::shared_ptr<rclcpp::Node> node = std::make_shared<rclcpp::Node>("footswitch");
+    rclcpp::Publisher<std_msgs::msg::Bool>::SharedPtr publisher = node->create_publisher<std_msgs::msg::Bool>("footswitch/triggered", 2);
 
-    if (argc == 1) {
-        usage();
-    }
-    if (argc == 2 && strcmp(argv[1], "-r") == 0) {
-        init();
-        read_pedals();
-        deinit();
-        return 0;
-    }
-    init_pedals();
-    while ((opt = getopt(argc, argv, "123rs:S:a:k:m:b:x:y:w:")) != -1) {
-        switch (opt) {
-            case '1':
-                curr_pedal = &pd.pedals[0];
-                break;
-            case '2':
-                curr_pedal = &pd.pedals[1];
-                break;
-            case '3':
-                curr_pedal = &pd.pedals[2];
-                break;
-            case 'r':
-                fprintf(stderr, "Cannot use -r with other options\n");
-                return 1;
-            case 's':
-                compile_string(optarg);
-                break;
-            case 'S':
-                compile_raw_string(optarg);
-                break;
-            case 'a':
-                compile_string_key(optarg);
-                break;
-            case 'k':
-                compile_key(optarg);
-                break;
-            case 'm':
-                compile_modifier(optarg);
-                break;
-            case 'b':
-                compile_mouse_button(optarg);
-                break;
-            case 'x':
-                compile_mouse_xyw(optarg, NULL, NULL);
-                break;
-            case 'y':
-                compile_mouse_xyw(NULL, optarg, NULL);
-                break;
-            case 'w':
-                compile_mouse_xyw(NULL, NULL, optarg);
-                break;
-            default:
-                usage();
-                break;
-        }
-    }
+    // footswitch stuff
     init();
-    write_pedals();
+    read_pedals();
     deinit();
     return 0;
 }
