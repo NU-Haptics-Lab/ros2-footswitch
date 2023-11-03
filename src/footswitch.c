@@ -395,7 +395,9 @@ int main(int argc, char *argv[]) {
 
     // footswitch stuff
     init();
-    read_pedals();
+    while (rclcpp::ok()){
+        read_pedals();
+    }
     deinit();
     return 0;
 }

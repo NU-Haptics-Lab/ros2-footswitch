@@ -19,10 +19,9 @@ FILE(GLOB src_files
     )
 
 
-set(NAME footswitch)
-add_executable(${NAME} ${src_files})
-ament_target_dependencies(${NAME} rclcpp std_msgs)
-target_link_libraries(${NAME} -lhidapi)
+set(NAME test_api)
+add_executable(${NAME} src/test.cpp)
+target_link_libraries(${NAME} -lhidapi-libusb)
 install(TARGETS
   ${NAME}
   DESTINATION lib/${PROJECT_NAME}
