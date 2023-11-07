@@ -7,7 +7,9 @@ endif()
 
 # find dependencies
 find_package(ament_cmake REQUIRED)
+find_package(ament_cmake_python REQUIRED)
 find_package(rclcpp REQUIRED)
+find_package(rclpy REQUIRED)
 find_package(std_msgs REQUIRED)
 
 include_directories(/src)
@@ -19,12 +21,19 @@ FILE(GLOB src_files
     )
 
 
-set(NAME test_api)
-add_executable(${NAME} src/test.cpp)
-target_link_libraries(${NAME} -lhidapi-libusb)
-install(TARGETS
-  ${NAME}
-  DESTINATION lib/${PROJECT_NAME}
+#set(NAME test_api)
+#add_executable(${NAME} src/test.cpp)
+#target_link_libraries(${NAME} -lhidapi-libusb)
+#install(TARGETS
+#  ${NAME}
+#  DESTINATION lib/${PROJECT_NAME}
+#)
+
+# Install Python modules
+ament_python_install_package(${PROJECT_NAME})
+
+# Install Python executables
+install(PROGRAMS scripts/footswitch.py DESTINATION lib/${PROJECT_NAME}
 )
 
 
