@@ -3,6 +3,7 @@
 import hid
 import threading
 import time
+import sys
 
 import rclpy
 from rclpy.node import Node
@@ -12,7 +13,7 @@ from std_msgs.msg import Bool
 SHUTDOWN = False
 STATE = False
 VENDOR_ID = 1523 # VEC infinity pedal
-PRODUCT_ID = 255 # VEC infinity pedal
+PRODUCT_ID = 255 # VEC infinity pe
 
 def update_hid():
     global STATE
@@ -50,24 +51,28 @@ class MinimalPublisher(Node):
 
 
 def main(args=None):
-    rclpy.init(args=args)
+    try:
+        rclpy.init(args=args)
 
-    minimal_publisher = MinimalPublisher()
+        minimal_publisher = MinimalPublisher()
 
-    # make the hid thread
-    x = threading.Thread(target=update_hid)
-    x.start()
+        # make the hid thread
+        x = threading.Thread(target=update_hid)
+        x.daemon = True
+        x.start()
 
-    rclpy.spin(minimal_publisher)
+        rclpy.spin(minimal_publisher)
 
-    # Destroy the node explicitly
-    # (optional - otherwise it will be done automatically
-    # when the garbage collector destroys the node object)
-    minimal_publisher.destroy_node()
-    rclpy.shutdown()
+        # Destroy the node explicitly
+        # (optional - otherwise it will be done automatically
+        # when the garbage collector destroys the node object)
+        minimal_publisher.destroy_node()
+        rclpy.shutdown()
 
-    SHUTDOWN = True
-    x.join()
+        SHUTDOWN = True
+        x.join()
+    except:
+        sys.exit(0)
 
 if __name__ == '__main__':
     main()
