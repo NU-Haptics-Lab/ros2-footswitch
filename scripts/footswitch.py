@@ -16,7 +16,8 @@ PRODUCT_ID = 255 # VEC infinity pedal
 
 def update_hid():
     global STATE
-    while True:
+    global SHUTDOWN
+    while not SHUTDOWN:
         # out = hid.Device(VENDOR_ID, PRODUCT_ID).read(64) # string, should be something like b'\x00\x00'
         try:
             out = int.from_bytes(hid.Device(VENDOR_ID, PRODUCT_ID).read(64), byteorder='little') # https://www.tutorialspoint.com/how-to-convert-bytes-to-int-in-python
@@ -30,7 +31,7 @@ def update_hid():
         # shutdown
         if SHUTDOWN:
             break
-        print(out)
+        # print(out)
         time.sleep(0.01) # go fast so that events aren't missed
 
 
@@ -56,6 +57,7 @@ def main(args=None):
 
     # make the hid thread
     x = threading.Thread(target=update_hid)
+    x.daemon = True
     x.start()
 
     rclpy.spin(minimal_publisher)
@@ -67,7 +69,7 @@ def main(args=None):
     rclpy.shutdown()
 
     SHUTDOWN = True
-    x.join()
+    # x.join()
 
 if __name__ == '__main__':
     main()
