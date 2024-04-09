@@ -1,1 +1,1 @@
-KERNEL=="event[0-19]*", SUBSYSTEM=="input", SUBSYSTEMS=="input", ATTRS{id/product}=="00ff", ATTRS{id/vendor}=="05f3", TAG+="uaccess", GROUP="footswitch", MODE="0660"
+KERNEL=="hidraw*", ATTRS{idVendor}=="05f3", MODE="0666"

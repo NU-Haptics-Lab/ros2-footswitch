@@ -11,7 +11,7 @@ from std_msgs.msg import Bool
 
 SHUTDOWN = False
 STATE = False
-VENDOR_ID = 1523 # VEC infinity pedal
+VENDOR_ID = 1523 # VEC infinity pedal hid.enumerate()
 PRODUCT_ID = 255 # VEC infinity pedal
 
 def update_hid():
