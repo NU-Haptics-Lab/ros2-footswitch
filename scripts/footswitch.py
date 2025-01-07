@@ -6,13 +6,15 @@ import time
 
 import rclpy
 from rclpy.node import Node
+from rclpy.qos import QoSProfile, QoSLivelinessPolicy
+from rclpy.duration import Duration
 
 from std_msgs.msg import Bool
 
 SHUTDOWN = False
 STATE = False
 VENDOR_ID = 1523 # VEC infinity pedal hid.enumerate()
-PRODUCT_ID = 255 # VEC infinity pedal
+PRODUCT_ID = 255 # VEC infinity pedal+
 
 def update_hid():
     global STATE
@@ -40,7 +42,11 @@ class MinimalPublisher(Node):
 
     def __init__(self):
         super().__init__('simple_footswitch')
-        self.publisher_ = self.create_publisher(Bool, 'footswitch/triggered', 10)
+        
+        # liveliness QoS
+        qos_profile = QoSProfile(depth=10, liveliness=QoSLivelinessPolicy.MANUAL_BY_TOPIC, liveliness_lease_duration=Duration(seconds=1))
+        
+        self.publisher_ = self.create_publisher(Bool, 'footswitch/triggered', qos_profile)
         timer_period = 0.1  # seconds
         self.timer = self.create_timer(timer_period, self.timer_callback)
 
