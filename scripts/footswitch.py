@@ -12,7 +12,7 @@ from rclpy.duration import Duration
 from std_msgs.msg import Bool
 
 SHUTDOWN = False
-STATE = False
+STATE = [False, False, False]  # [left, middle, right]
 VENDOR_ID = 1523 # VEC infinity pedal hid.enumerate()
 PRODUCT_ID = 255 # VEC infinity pedal+
 
@@ -25,10 +25,7 @@ def update_hid():
             out = int.from_bytes(hid.Device(VENDOR_ID, PRODUCT_ID).read(64), byteorder='little') # https://www.tutorialspoint.com/how-to-convert-bytes-to-int-in-python
         except:
             out = 0
-        if out != 0:
-            STATE = True
-        else:
-            STATE = False
+        STATE = [bool(out & (1 << i)) for i in range(3)]  # bit 0=left, 1=middle, 2=right
 
         # shutdown
         if SHUTDOWN:
@@ -46,14 +43,19 @@ class MinimalPublisher(Node):
         # liveliness QoS
         qos_profile = QoSProfile(depth=10, liveliness=QoSLivelinessPolicy.MANUAL_BY_TOPIC, liveliness_lease_duration=Duration(seconds=1))
         
-        self.publisher_ = self.create_publisher(Bool, 'footswitch/triggered', qos_profile)
+        self.publishers_ = [
+            self.create_publisher(Bool, 'footswitch/left', qos_profile),
+            self.create_publisher(Bool, 'footswitch/middle', qos_profile),
+            self.create_publisher(Bool, 'footswitch/right', qos_profile),
+        ]
         timer_period = 0.1  # seconds
         self.timer = self.create_timer(timer_period, self.timer_callback)
 
     def timer_callback(self):
-        msg = Bool()
-        msg.data = STATE
-        self.publisher_.publish(msg)
+        for pub, state in zip(self.publishers_, STATE):
+            msg = Bool()
+            msg.data = state
+            pub.publish(msg)
 
 
 def main(args=None):
